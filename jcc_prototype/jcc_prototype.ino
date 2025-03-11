@@ -1,26 +1,21 @@
 #include <Arduino.h>
-#include <TM1637Display.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
-
+#include "token.h"
 #define BUTTON_PIN 17
 #define MIC_PIN 4
 #define BUZZER_PIN 16
-#define CLK_PIN 21
-#define DIO_PIN 22
-#define WIFI_SSID "ssid"
-#define WIFI_PASS "1q2w3e4r"
-#define LINE_NOTIFY_TOKEN ""
-WiFiClient client;
 
-TM1637Display display(CLK_PIN, DIO_PIN);
+WiFiClient client;
+#define LINE_NOTIFY_ENDPOINT "https://notify-api.line.me/api/notify"
+
 
 unsigned long countdownStartTime = 0;
 const unsigned long countdownDuration = 0.05 * 60 * 1000;
 bool countdownActive = false;
 
 void wifi_connect();
-void line_notify();
+void line_notify(char*);
 void triggerAlarm();
 
 void setup() {
@@ -31,7 +26,8 @@ void setup() {
     // display.showNumberDecEx(500, 0b01000000, true);
 
     Serial.begin(115200);
-    // wifi_connect();
+    wifi_connect();
+    line_notify("Initial complete");
 }
 
 void loop() {
@@ -90,48 +86,51 @@ void triggerAlarm() {
   }
 }
 
-// void wifi_connect() {
-//     WiFi.mode(WIFI_AP_STA);
-//     WiFi.begin(WIFI_STA_NAME, WIFI_STA_PASS);
-//     while (WiFi.status() != WL_CONNECTED)
-//     {
-//         delay(500);
-//         Serial.print(".");
-//         digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-//     }
-//     Serial.println("");
-//     Serial.print("Connected to WiFi network with IP Address: ");
-//     Serial.println(WiFi.localIP());
-//     Serial.println(WiFi.macAddress());
-//     Serial.println(WiFi.channel());
-// }
+void wifi_connect() {
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.begin(WIFI_STA_NAME, WIFI_STA_PASS);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+        // digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    }
+    Serial.println("");
+    Serial.print("Connected to WiFi network with IP Address: ");
+    Serial.println(WiFi.localIP());
+    
+}
 
-// void line_notify() {
-//     HTTPClient http;
-//     char* message = "HAHAHA";
-//     http.begin(lineNotifyEndpoint);
+void line_notify(char* message) {
+    if(WiFi.status() != WL_CONNECTED) {
+      Serial.println("Wifi is not connected");
+      return;
+    }
+    HTTPClient http;
     
-//     // Add headers
-//     http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-//     http.addHeader("Authorization", String("Bearer ") + LINE_NOTIFY_TOKEN);
+    http.begin(String(LINE_NOTIFY_ENDPOINT));
     
-//     // Prepare the data in application/x-www-form-urlencoded format
-//     String httpRequestData = "message=" + String(message);
+    // Add headers
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    http.addHeader("Authorization", String("Bearer ") + LINE_NOTIFY_TOKEN);
     
-//     // Send POST request
-//     int httpResponseCode = http.POST(httpRequestData);
+    // Prepare the data in application/x-www-form-urlencoded format
+    String httpRequestData = "message=" + String(message);
     
-//     // Handle response
-//     if (httpResponseCode > 0) {
-//       String response = http.getString();
-//       Serial.println("HTTP Response code: " + String(httpResponseCode));
-//       Serial.println("Response: " + response);
-//     } else {
-//       Serial.print("Error sending HTTP POST: ");
-//       Serial.println(httpResponseCode);
-//     }
+    // Send POST request
+    int httpResponseCode = http.POST(httpRequestData);
     
-//     // Free resources
-//     http.end();
+    // Handle response
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.println("HTTP Response code: " + String(httpResponseCode));
+      Serial.println("Response: " + response);
+    } else {
+      Serial.print("Error sending HTTP POST: ");
+      Serial.println(httpResponseCode);
+    }
+    
+    // Free resources
+    http.end();
 
-// }
+}
