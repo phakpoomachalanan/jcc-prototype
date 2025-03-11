@@ -16,7 +16,7 @@ WiFiClient client;
 TM1637Display display(CLK_PIN, DIO_PIN);
 
 unsigned long countdownStartTime = 0;
-const unsigned long countdownDuration = 0.1 * 60 * 1000;
+const unsigned long countdownDuration = 0.05 * 60 * 1000;
 bool countdownActive = false;
 
 void wifi_connect();
@@ -52,7 +52,8 @@ void loop() {
 
     if (countdownActive) {
         unsigned long elapsed = millis() - countdownStartTime;
-        unsigned long remaining = countdownDuration - elapsed;
+        long remaining = countdownDuration - elapsed;
+        Serial.println("remaining: " + String(remaining));
 
         if (remaining > 0) {
             int minutes = remaining / 60000;
@@ -62,7 +63,7 @@ void loop() {
         }
 
         int micValue = analogRead(MIC_PIN);
-        Serial.println(micValue);
+        Serial.println("micValue: " + String(micValue));
         if (micValue < 250) {
             Serial.println("Loud sound detected! Triggering alarm...");
             // triggerAlarm();
